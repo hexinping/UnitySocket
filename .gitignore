@@ -1,3 +1,6 @@
 Client/UnityClient/Library/
 Client/UnityClient/Temp/
 Client/UnityClient/Logs/
+Server/US/UnityServer/obj/
+Server/US/UnityServer/bin/
+Server/US/.vs/
