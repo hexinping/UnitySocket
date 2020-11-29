@@ -1,10 +1,13 @@
-﻿using System;
+﻿using Google.Protobuf;
+using HxpTest.AddressBook;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Sockets;
 using System.Text;
+using static HxpTest.AddressBook.Person.Types;
 
 namespace UnityServer
 {
@@ -45,8 +48,18 @@ namespace UnityServer
             var client = socket.EndAccept(ar);
             Console.WriteLine($"有新的客户端连接: {client.RemoteEndPoint}");
 
+            Person john = new Person
+            {
+                Id = 1234,
+                Name = "Hi there, I accept you request at " + DateTime.Now.ToString(),
+                Email = "jdoe@example.com",
+                Phones = { new Person.Types.PhoneNumber { Number = "555-4321", Type = PhoneType.Home } }
+            };
+
+            byte[] byteArray = john.ToByteArray();
+
             //给客户端发送一个欢迎消息
-            client.Send(Encoding.Unicode.GetBytes("Hi there, I accept you request at " + DateTime.Now.ToString()));
+            client.Send(byteArray);
 
 
             //测试代码
@@ -62,7 +75,20 @@ namespace UnityServer
                 {
                     try
                     {
-                        client.Send(Encoding.Unicode.GetBytes("Message from server at " + DateTime.Now.ToString()));
+                        //使用protobuf
+                        Person john = new Person
+                        {
+                            Id = 1234,
+                            Name = "Message from server at " + DateTime.Now.ToString(),
+                            Email = "jdoe@example.com",
+                            Phones = { new Person.Types.PhoneNumber { Number = "555-4321", Type = PhoneType.Home } }
+                        };
+
+                        byte[] byteArray = john.ToByteArray();
+
+                        client.Send(byteArray);
+
+                        //client.Send(Encoding.Unicode.GetBytes("Message from server at " + DateTime.Now.ToString()));
                     }
                     catch (SocketException ex)
                     {
@@ -98,10 +124,13 @@ namespace UnityServer
                 var length = clientSocket.EndReceive(ar);
                 if(length > 0)
                 {
-                    //读取出来消息内容
-                    var message = Encoding.Unicode.GetString(buffer, 0, length);
+                    //读取出来消息内容 使用protobuf
+                    var data = buffer.Take(length).ToArray();
+                    var message = Person.Parser.ParseFrom(data);
+
+                    //var message = Encoding.Unicode.GetString(buffer, 0, length);
                     //显示消息
-                    Console.WriteLine(message);
+                    Console.WriteLine(message.Name);
 
                     //接收下一个消息(因为这是一个递归的调用，所以这样就可以一直接收消息了）
                     clientSocket.BeginReceive(buffer, 0, buffer.Length, SocketFlags.None, new AsyncCallback(ReceiveMessage), clientSocket);

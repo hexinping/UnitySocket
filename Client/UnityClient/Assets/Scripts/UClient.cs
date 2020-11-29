@@ -7,6 +7,7 @@ using UnityEngine;
 using HxpTest.AddressBook;
 using static HxpTest.AddressBook.Person.Types;
 using Google.Protobuf;
+using System.Linq;
 
 public class UClient : MonoBehaviour
 {
@@ -16,6 +17,7 @@ public class UClient : MonoBehaviour
 
     private float sendTimeIntveral = 2;
     private float lastSendTime;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -30,21 +32,6 @@ public class UClient : MonoBehaviour
         socket.BeginReceive(buffer, 0, buffer.Length, SocketFlags.None, new AsyncCallback(ReceiveMessage), socket);
 
         Debug.Log("connect to the server");
-
-        //test protobuf
-        //使用protobuf
-        Person john = new Person
-        {
-            Id = 1234,
-            Name = DateTime.Now.ToString(),
-            Email = "jdoe@example.com",
-            Phones = { new Person.Types.PhoneNumber { Number = "555-4321", Type = PhoneType.Home } }
-        };
-        var byteArray = john.ToByteArray();
-
-        var johnP = Person.Parser.ParseFrom(byteArray);
-        Debug.Log($"{johnP.Id} {johnP.Name} {johnP.Email}");
-
     }
 
     public void ReceiveMessage(IAsyncResult ar)
@@ -58,9 +45,14 @@ public class UClient : MonoBehaviour
             if (length > 0)
             {
                 //读取出来消息内容
-                var message = Encoding.Unicode.GetString(buffer, 0, length);
+                //var message = Encoding.Unicode.GetString(buffer, 0, length);
+                //Debug.Log(message);
+                var data = buffer.Take(length).ToArray();
+                var message = Person.Parser.ParseFrom(data);
+
+
                 //显示消息
-                Debug.Log(message);
+                Debug.Log(message.Name);
 
                 //接收下一个消息(因为这是一个递归的调用，所以这样就可以一直接收消息了）
                 clientSocket.BeginReceive(buffer, 0, buffer.Length, SocketFlags.None, new AsyncCallback(ReceiveMessage), clientSocket);
@@ -86,22 +78,42 @@ public class UClient : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if (clientSocket == null) return;
         //测试code
         if (Time.time - lastSendTime >= sendTimeIntveral)
         {
             lastSendTime = Time.time;
-            var message = "Message from client : " + DateTime.Now;
-            var outputBuffer = Encoding.Unicode.GetBytes(message);
-            clientSocket.BeginSend(outputBuffer, 0, outputBuffer.Length, SocketFlags.None, null, null);
+            //var message = "Message from client : " + DateTime.Now;
+            //var outputBuffer = Encoding.Unicode.GetBytes(message);
+
+          
+            //使用protobuf
+            Person john = new Person
+            {
+                Id = 1234,
+                Name = "Message from client at " + DateTime.Now.ToString(),
+                Email = "jdoe@example.com",
+                Phones = { new Person.Types.PhoneNumber { Number = "555-4321", Type = PhoneType.Home } }
+            };
+
+            byte[] byteArray = john.ToByteArray();
+            if (clientSocket == null) return;
+            clientSocket.BeginSend(byteArray, 0, byteArray.Length, SocketFlags.None, null, null);
         }
     }
     private void OnServerDisconnect()
     {
-        clientSocket.Close();
+        if (clientSocket != null)
+        {
+            clientSocket.Close();
+            clientSocket = null;
+        }
+       
     }
 
     private void OnDestroy()
     {
         OnServerDisconnect();
     }
+
 }
