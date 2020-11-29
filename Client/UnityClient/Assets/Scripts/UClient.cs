@@ -4,6 +4,9 @@ using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Text;
 using UnityEngine;
+using HxpTest.AddressBook;
+using static HxpTest.AddressBook.Person.Types;
+using Google.Protobuf;
 
 public class UClient : MonoBehaviour
 {
@@ -27,6 +30,20 @@ public class UClient : MonoBehaviour
         socket.BeginReceive(buffer, 0, buffer.Length, SocketFlags.None, new AsyncCallback(ReceiveMessage), socket);
 
         Debug.Log("connect to the server");
+
+        //test protobuf
+        //使用protobuf
+        Person john = new Person
+        {
+            Id = 1234,
+            Name = DateTime.Now.ToString(),
+            Email = "jdoe@example.com",
+            Phones = { new Person.Types.PhoneNumber { Number = "555-4321", Type = PhoneType.Home } }
+        };
+        var byteArray = john.ToByteArray();
+
+        var johnP = Person.Parser.ParseFrom(byteArray);
+        Debug.Log($"{johnP.Id} {johnP.Name} {johnP.Email}");
 
     }
 
