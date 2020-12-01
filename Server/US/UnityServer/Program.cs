@@ -76,7 +76,7 @@ namespace UnityServer
                     try
                     {
                         //使用protobuf
-                        Person john = new Person
+                        Person johnSC = new Person
                         {
                             Id = 1234,
                             Name = "Message from server at " + DateTime.Now.ToString(),
@@ -84,9 +84,9 @@ namespace UnityServer
                             Phones = { new Person.Types.PhoneNumber { Number = "555-4321", Type = PhoneType.Home } }
                         };
 
-                        byte[] byteArray = john.ToByteArray();
+                        byte[] byteArraySC = johnSC.ToByteArray();
 
-                        client.Send(byteArray);
+                        client.Send(byteArraySC);
 
                         //client.Send(Encoding.Unicode.GetBytes("Message from server at " + DateTime.Now.ToString()));
                     }
