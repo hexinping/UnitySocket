@@ -48,8 +48,8 @@ public class UClient : MonoBehaviour
                 //var message = Encoding.Unicode.GetString(buffer, 0, length);
                 //Debug.Log(message);
                 var data = buffer.Take(length).ToArray();
-                var message = Person.Parser.ParseFrom(data);
-
+                //var message = Person.Parser.ParseFrom(data);
+                Person message = ProtoBufUtil.Uncode<Person>(data);
 
                 //显示消息
                 Debug.Log(message.Name);
@@ -96,7 +96,8 @@ public class UClient : MonoBehaviour
                 Phones = { new Person.Types.PhoneNumber { Number = "555-4321", Type = PhoneType.Home } }
             };
 
-            byte[] byteArray = john.ToByteArray();
+            //byte[] byteArray = john.ToByteArray();
+            byte[] byteArray = ProtoBufUtil.Encode(john.ToByteArray(), 102);
             if (clientSocket == null) return;
             clientSocket.BeginSend(byteArray, 0, byteArray.Length, SocketFlags.None, null, null);
         }

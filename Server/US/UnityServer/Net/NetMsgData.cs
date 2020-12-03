@@ -1,18 +1,18 @@
 ﻿
-using ProtoBuf;
+using Google.Protobuf;
 
-[ProtoContract]
-public class NetMsgData
+public class NetMsgData<T>  where T: IMessage<T>
 {
-    [ProtoMember(1)]
-    public ushort ID { get; set; }
-    [ProtoMember(2)]
-    public string Data { get; set; }
+    
+    public ushort id { get; set; }
+    public ushort len { get; set; }
+    public T msg;
 
-    public NetMsgData(ushort id, string data)
+    public NetMsgData(ushort id, T msg, ushort len)
     {
-        ID = id;
-        Data = data;
+        id = id;
+        msg = msg;
+        len = len;
     }
 }
 

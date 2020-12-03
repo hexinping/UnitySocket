@@ -56,7 +56,9 @@ namespace UnityServer
                 Phones = { new Person.Types.PhoneNumber { Number = "555-4321", Type = PhoneType.Home } }
             };
 
-            byte[] byteArray = john.ToByteArray();
+            //byte[] byteArray = john.ToByteArray();
+
+            byte[] byteArray = ProtoBufUtil.Encode(john.ToByteArray(), 100);
 
             //给客户端发送一个欢迎消息
             client.Send(byteArray);
@@ -84,8 +86,8 @@ namespace UnityServer
                             Phones = { new Person.Types.PhoneNumber { Number = "555-4321", Type = PhoneType.Home } }
                         };
 
-                        byte[] byteArraySC = johnSC.ToByteArray();
-
+                        //byte[] byteArraySC = johnSC.ToByteArray();
+                        byte[] byteArraySC = ProtoBufUtil.Encode(johnSC.ToByteArray(), 101);
                         client.Send(byteArraySC);
 
                         //client.Send(Encoding.Unicode.GetBytes("Message from server at " + DateTime.Now.ToString()));
@@ -126,7 +128,9 @@ namespace UnityServer
                 {
                     //读取出来消息内容 使用protobuf
                     var data = buffer.Take(length).ToArray();
-                    var message = Person.Parser.ParseFrom(data);
+                    //var message = Person.Parser.ParseFrom(data);
+
+                    Person message = ProtoBufUtil.Uncode<Person>(data);
 
                     //var message = Encoding.Unicode.GetString(buffer, 0, length);
                     //显示消息
