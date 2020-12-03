@@ -50,10 +50,10 @@ public class UClient : MonoBehaviour
 
     }
 
-    public static void Test(IMessage msg, ushort msgId)
+    public static void Test(byte[] data, ushort msgId)
     {
-        Person msg1 = msg as Person;
-        Debug.Log($"客户端收到服务器消息 {msgId} 回调====={msg1.Name}");
+        Person person = Person.Parser.ParseFrom(data);
+        Debug.Log($"客户端收到服务器消息 {msgId} 回调====={person.Name}");
     }
 
     public void ReceiveMessage(IAsyncResult ar)
@@ -70,20 +70,6 @@ public class UClient : MonoBehaviour
                 //var message = Encoding.Unicode.GetString(buffer, 0, length);
                 //Debug.Log(message);
                 var data = buffer.Take(length).ToArray();
-                //var message = Person.Parser.ParseFrom(data);
-
-                //ushort msgId = 0;
-                //Person message = ProtoBufUtil.Uncode<Person>(data, out msgId);
-
-                //NetMsg.HandleMsg<Person>(data);
-
-                
-                //Type type = Assembly.Load("HxpTest.AddressBook").GetType("Person");
-                //MethodInfo method = type.GetMethod("Parser"); //调用静态方法
-                //var Parser = method.Invoke(null, null);
-                
-
-
 
                 MemoryStream ms = null;
                 using (ms = new MemoryStream(data))
@@ -93,25 +79,16 @@ public class UClient : MonoBehaviour
                     ushort protoId = reader.ReadUInt16();
 
                     Debug.Log($"[Client] receive ：protoID：{protoId}，dataLen：{msgLen}");
-                    byte[] pbdata = reader.ReadBytes(msgLen);
                     if (msgLen <= data.Length - 4)
                     {
-                        if (protoId == 101 || protoId == 102)
-                        {
-                            Person person =  Person.Parser.ParseFrom(pbdata);
-                            NetMsg.ExcuteHandle(protoId, person);
-                        }
-                      
+                        byte[] pbdata = reader.ReadBytes(msgLen);
+                        NetMsg.HandleMsg(pbdata, protoId);
                     }
                     else
                     {
-                        Console.WriteLine($" {protoId} 协议长度错误");
+                        Debug.Log($" [Client] {protoId} 协议长度错误");
                     }
                 }
-
-
-                //显示消息
-                ///Debug.Log(message.Name);
 
                 //接收下一个消息(因为这是一个递归的调用，所以这样就可以一直接收消息了）
                 clientSocket.BeginReceive(buffer, 0, buffer.Length, SocketFlags.None, new AsyncCallback(ReceiveMessage), clientSocket);

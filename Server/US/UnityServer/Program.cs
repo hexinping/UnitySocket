@@ -2,6 +2,7 @@
 using HxpTest.AddressBook;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http.Headers;
@@ -46,10 +47,10 @@ namespace UnityServer
 
         }
 
-        public static void Test(IMessage msg, ushort msgId)
+        public static void Test(byte[] data, ushort msgId)
         {
-            Person msg1 = msg as Person;
-            Console.WriteLine($"服务端收到客户端的消息{msgId} 回调{msg1.Name}");
+            Person person = Person.Parser.ParseFrom(data);
+            Console.WriteLine($"服务端收到客户端的消息{msgId} 回调{person.Name}");
         }
 
         public static void ClientAccepted(IAsyncResult ar)
@@ -151,7 +152,26 @@ namespace UnityServer
                     //ushort msgId = 0;
                     //Person message = ProtoBufUtil.Uncode<Person>(data, out msgId);
 
-                    NetMsg.HandleMsg<Person>(data);
+                    //NetMsg.HandleMsg<Person>(data);
+
+                    MemoryStream ms = null;
+                    using (ms = new MemoryStream(data))
+                    {
+                        BinaryReader reader = new BinaryReader(ms);
+                        ushort msgLen = reader.ReadUInt16();
+                        ushort protoId = reader.ReadUInt16();
+
+                        Console.WriteLine($"[Server] receive ：protoID：{protoId}，dataLen：{msgLen}");
+                        if (msgLen <= data.Length - 4)
+                        {
+                            byte[] pbdata = reader.ReadBytes(msgLen);
+                            NetMsg.HandleMsg(pbdata, protoId);
+                        }
+                        else
+                        {
+                            Console.WriteLine($"[Server] {protoId} 协议长度错误");
+                        }
+                    }
 
                     //var message = Encoding.Unicode.GetString(buffer, 0, length);
                     //显示消息

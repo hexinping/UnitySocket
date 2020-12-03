@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Net.Sockets;
 
-public delegate void NetHandler(IMessage msgData, ushort msgId);
+public delegate void NetHandler(byte[] data, ushort msgId);
 
 
 /// <summary>
@@ -26,15 +26,12 @@ public static class NetMsg
     }
 
     //// 派发
-    public static void HandleMsg<T>(byte[] buffer) where T : IMessage<T>, new()
+
+    public static void HandleMsg(byte[] data, ushort msgId)
     {
-        ushort msgId = 0;
-        T data = ProtoBufUtil.Uncode<T>(buffer, out msgId);
-        var protoID = msgId;
-        if (m_EventMap.ContainsKey(protoID))
+        if (m_EventMap.ContainsKey(msgId))
         {
-            var callback = m_EventMap[protoID];
-            Console.WriteLine($"[Server]收到 ：protoID：{protoID}，dataLen：{buffer.Length - 4}");
+            var callback = m_EventMap[msgId];
             callback?.Invoke(data, msgId);
         }
 
