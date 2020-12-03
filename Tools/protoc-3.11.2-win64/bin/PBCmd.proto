@@ -1,0 +1,8 @@
+syntax = "proto3"; //使用proto3语法编译
+package PB;
+
+enum EnmCmdID
+{
+	CS_LOGIN = 0;//登录请求协议号
+	SC_LOGIN = 1;//登录请求回包协议号
+}
