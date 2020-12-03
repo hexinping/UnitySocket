@@ -21,6 +21,8 @@ public class UClient : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        AddListeners();
+
         var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         clientSocket = socket;
         //连接到指定服务器的指定端口
@@ -32,6 +34,18 @@ public class UClient : MonoBehaviour
         socket.BeginReceive(buffer, 0, buffer.Length, SocketFlags.None, new AsyncCallback(ReceiveMessage), socket);
 
         Debug.Log("connect to the server");
+    }
+
+    public static void AddListeners()
+    {
+        NetMsg.AddListener(101, new NetHandler(Test));
+
+    }
+
+    public static void Test(IMessage msg, ushort msgId)
+    {
+        Person msg1 = msg as Person;
+        Debug.Log($"客户端收到服务器消息 {msgId} 回调====={msg1.Name}");
     }
 
     public void ReceiveMessage(IAsyncResult ar)
@@ -49,10 +63,14 @@ public class UClient : MonoBehaviour
                 //Debug.Log(message);
                 var data = buffer.Take(length).ToArray();
                 //var message = Person.Parser.ParseFrom(data);
-                Person message = ProtoBufUtil.Uncode<Person>(data);
+
+                //ushort msgId = 0;
+                //Person message = ProtoBufUtil.Uncode<Person>(data, out msgId);
+
+                NetMsg.HandleMsg<Person>(data);
 
                 //显示消息
-                Debug.Log(message.Name);
+                ///Debug.Log(message.Name);
 
                 //接收下一个消息(因为这是一个递归的调用，所以这样就可以一直接收消息了）
                 clientSocket.BeginReceive(buffer, 0, buffer.Length, SocketFlags.None, new AsyncCallback(ReceiveMessage), clientSocket);
@@ -97,9 +115,10 @@ public class UClient : MonoBehaviour
             };
 
             //byte[] byteArray = john.ToByteArray();
-            byte[] byteArray = ProtoBufUtil.Encode(john.ToByteArray(), 102);
+            //byte[] byteArray = ProtoBufUtil.Encode(john.ToByteArray(), 102);
             if (clientSocket == null) return;
-            clientSocket.BeginSend(byteArray, 0, byteArray.Length, SocketFlags.None, null, null);
+            //clientSocket.BeginSend(byteArray, 0, byteArray.Length, SocketFlags.None, null, null);
+            NetMsg.SendMsg(clientSocket, john, 102);
         }
     }
     private void OnServerDisconnect()

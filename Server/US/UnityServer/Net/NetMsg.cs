@@ -1,8 +1,10 @@
 ﻿using Google.Protobuf;
+using System;
 using System.Collections.Generic;
 using System.Net.Sockets;
 
-public delegate void NetHandler(string msgData);
+public delegate void NetHandler(IMessage msgData, ushort msgId);
+
 
 /// <summary>
 /// 业务和socket的中间层
@@ -10,47 +12,37 @@ public delegate void NetHandler(string msgData);
 /// </summary>
 public static class NetMsg
 {
-    private static Dictionary<int, NetHandler> m_EventMap = new Dictionary<int, NetHandler>();
+    private static Dictionary<ushort, NetHandler> m_EventMap = new Dictionary<ushort, NetHandler>();
     private static Dictionary<int, Socket> m_socketMap = new Dictionary<int, Socket>();
 
-    // 向服务器发送请求
-    //public static void SendMsg<T>(T data, ushort id, ushort len) where T: IMessage<T>
-    //{
-
-    //    var msgData = new NetMsgData<T>(id, data, len);
-
-    //    //ClientSocket.Instance.SendMsg(ProtoBufUtil.PackNetMsg(data));
-    //    //Log.Debug($"[Client]client send: ID:{data.ID},Data:{data.Data}");
-    //}
+   
+    // 发送请求
+    public static void SendMsg(Socket socket, IMessage data, ushort id)
+    {
+        var content = data.ToByteArray();
+        var msg = ProtoBufUtil.Encode(content, id);
+        socket.Send(msg);
+        Console.WriteLine($"[Server] Server send: ID:{id},DataLen:{content.Length}");
+    }
 
     //// 派发
-    //public static void HandleMsg(byte[] buffer)
-    //{
-    //    //NetMsgData data = ProtoBufUtil.UnpackNetMsg(buffer);
-    //    //var protoID = data.ID;
-    //    //if (m_EventMap.TryGetValue(protoID, out NetHandler callback))
-    //    //{
-    //    //    //Log.Debug($"[Server]收到 ：protoID：{protoID}，data：{data.Data}");
-    //    //    callback?.Invoke(data.Data);
-    //    //}
-    //    //else
-    //    //{
-    //    //    //Log.Debug($"[Server]收到未监听的服务器消息：protoID：{protoID}，data：{data.Data}");
-    //    //}
-    //}
-
-    public static void SendMsg(byte[] msgData)
+    public static void HandleMsg<T>(byte[] buffer) where T : IMessage<T>, new()
     {
+        ushort msgId = 0;
+        T data = ProtoBufUtil.Uncode<T>(buffer, out msgId);
+        var protoID = msgId;
+        if (m_EventMap.ContainsKey(protoID))
+        {
+            var callback = m_EventMap[protoID];
+            Console.WriteLine($"[Server]收到 ：protoID：{protoID}，dataLen：{buffer.Length - 4}");
+            callback?.Invoke(data, msgId);
+        }
 
-       
-
-        //ClientSocket.Instance.SendMsg(ProtoBufUtil.PackNetMsg(data));
-        //Log.Debug($"[Client]client send: ID:{data.ID},Data:{data.Data}");
     }
 
 
     // 移除监听
-    public static void RemoveListener(int protoID)
+    public static void RemoveListener(ushort protoID)
     {
         if (m_EventMap.ContainsKey(protoID))
         {
@@ -60,13 +52,12 @@ public static class NetMsg
     }
 
     // 监听 暂时只允许一个地方监听一条服务器消息
-    public static void AddListener(int protoID, NetHandler callBack)
+    public static void AddListener(ushort protoID, NetHandler callBack)
     {
         if (!m_EventMap.ContainsKey(protoID))
         {
             m_EventMap.Add(protoID, null);
         }
-
         m_EventMap[protoID] = callBack;
     }
 }

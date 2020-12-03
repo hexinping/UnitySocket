@@ -15,6 +15,7 @@ namespace UnityServer
     {
         static void Main(string[] args)
         {
+            AddListeners();
             //Console.WriteLine("Hello World!");
 
             //创建一个新的Socket,这里我们使用最常用的基于TCP的Stream Socket（流式套接字）
@@ -39,6 +40,18 @@ namespace UnityServer
 
         }
 
+        public static void AddListeners()
+        {
+           NetMsg.AddListener(102, new NetHandler(Test));
+
+        }
+
+        public static void Test(IMessage msg, ushort msgId)
+        {
+            Person msg1 = msg as Person;
+            Console.WriteLine($"服务端收到客户端的消息{msgId} 回调{msg1.Name}");
+        }
+
         public static void ClientAccepted(IAsyncResult ar)
         {
 
@@ -56,12 +69,16 @@ namespace UnityServer
                 Phones = { new Person.Types.PhoneNumber { Number = "555-4321", Type = PhoneType.Home } }
             };
 
+           
+
             //byte[] byteArray = john.ToByteArray();
 
-            byte[] byteArray = ProtoBufUtil.Encode(john.ToByteArray(), 100);
+            //byte[] byteArray = ProtoBufUtil.Encode(john.ToByteArray(), 100);
+
 
             //给客户端发送一个欢迎消息
-            client.Send(byteArray);
+            //client.Send(byteArray);
+            NetMsg.SendMsg(client, john, 101);
 
 
             //测试代码
@@ -87,8 +104,10 @@ namespace UnityServer
                         };
 
                         //byte[] byteArraySC = johnSC.ToByteArray();
-                        byte[] byteArraySC = ProtoBufUtil.Encode(johnSC.ToByteArray(), 101);
-                        client.Send(byteArraySC);
+                        //byte[] byteArraySC = ProtoBufUtil.Encode(johnSC.ToByteArray(), 101);
+                        //client.Send(byteArraySC);
+
+                        NetMsg.SendMsg(client, johnSC, 101);
 
                         //client.Send(Encoding.Unicode.GetBytes("Message from server at " + DateTime.Now.ToString()));
                     }
@@ -129,12 +148,14 @@ namespace UnityServer
                     //读取出来消息内容 使用protobuf
                     var data = buffer.Take(length).ToArray();
                     //var message = Person.Parser.ParseFrom(data);
+                    //ushort msgId = 0;
+                    //Person message = ProtoBufUtil.Uncode<Person>(data, out msgId);
 
-                    Person message = ProtoBufUtil.Uncode<Person>(data);
+                    NetMsg.HandleMsg<Person>(data);
 
                     //var message = Encoding.Unicode.GetString(buffer, 0, length);
                     //显示消息
-                    Console.WriteLine(message.Name);
+                    //Console.WriteLine(message.Name);
 
                     //接收下一个消息(因为这是一个递归的调用，所以这样就可以一直接收消息了）
                     clientSocket.BeginReceive(buffer, 0, buffer.Length, SocketFlags.None, new AsyncCallback(ReceiveMessage), clientSocket);

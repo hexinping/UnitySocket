@@ -2,11 +2,9 @@
 using Google.Protobuf;
 using System;
 using System.IO;
-using UnityEngine;
 
 public class ProtoBufUtil
 {
-    
     // 封包，依次写入协议数据长度、协议id、协议内容
     public static byte[] Encode(byte[] data, ushort msgId)
     {
@@ -28,7 +26,7 @@ public class ProtoBufUtil
     }
 
     // 解包，依次写出协议数据长度、协议id、协议数据内容
-    public static T Uncode<T>(byte[] msgData) where T : IMessage<T>, new()
+    public static T Uncode<T>(byte[] msgData, out ushort msgId) where T : IMessage<T>, new()
     {
         MemoryStream ms = null;
         MessageParser<T> Parser = new MessageParser<T>(() => new T());
@@ -38,19 +36,20 @@ public class ProtoBufUtil
             BinaryReader reader = new BinaryReader(ms);
             ushort msgLen = reader.ReadUInt16();
             ushort protoId = reader.ReadUInt16();
+            msgId = protoId;
             byte[] pbdata = reader.ReadBytes(msgLen);
             if (msgLen <= msgData.Length - 4)
             {
                 result = Parser.ParseFrom(pbdata);
-                Debug.Log($" 客户端收到消息 {protoId} ");
             }
             else
             {
-                Debug.Log($" {protoId} 协议长度错误");
+                Console.WriteLine($" {protoId} 协议长度错误");
             }
         }
 
         return result;
     }
+
 }
 
