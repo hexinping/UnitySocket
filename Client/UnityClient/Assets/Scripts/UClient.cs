@@ -8,6 +8,8 @@ using HxpTest.AddressBook;
 using static HxpTest.AddressBook.Person.Types;
 using Google.Protobuf;
 using System.Linq;
+using System.IO;
+using System.Reflection;
 
 public class UClient : MonoBehaviour
 {
@@ -17,6 +19,12 @@ public class UClient : MonoBehaviour
 
     private float sendTimeIntveral = 2;
     private float lastSendTime;
+
+    private Dictionary<ushort, Type> pTypeDic = new Dictionary<ushort, Type>
+    {
+        {101, typeof(Person)},
+        {102, typeof(Person)}
+    };
 
     // Start is called before the first frame update
     void Start()
@@ -67,7 +75,40 @@ public class UClient : MonoBehaviour
                 //ushort msgId = 0;
                 //Person message = ProtoBufUtil.Uncode<Person>(data, out msgId);
 
-                NetMsg.HandleMsg<Person>(data);
+                //NetMsg.HandleMsg<Person>(data);
+
+                
+                //Type type = Assembly.Load("HxpTest.AddressBook").GetType("Person");
+                //MethodInfo method = type.GetMethod("Parser"); //调用静态方法
+                //var Parser = method.Invoke(null, null);
+                
+
+
+
+                MemoryStream ms = null;
+                using (ms = new MemoryStream(data))
+                {
+                    BinaryReader reader = new BinaryReader(ms);
+                    ushort msgLen = reader.ReadUInt16();
+                    ushort protoId = reader.ReadUInt16();
+
+                    Debug.Log($"[Client] receive ：protoID：{protoId}，dataLen：{msgLen}");
+                    byte[] pbdata = reader.ReadBytes(msgLen);
+                    if (msgLen <= data.Length - 4)
+                    {
+                        if (protoId == 101 || protoId == 102)
+                        {
+                            Person person =  Person.Parser.ParseFrom(pbdata);
+                            NetMsg.ExcuteHandle(protoId, person);
+                        }
+                      
+                    }
+                    else
+                    {
+                        Console.WriteLine($" {protoId} 协议长度错误");
+                    }
+                }
+
 
                 //显示消息
                 ///Debug.Log(message.Name);

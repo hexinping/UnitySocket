@@ -41,6 +41,16 @@ public static class NetMsg
 
     }
 
+    public static void ExcuteHandle(ushort protoID, IMessage data) 
+    {
+        if (m_EventMap.ContainsKey(protoID))
+        {
+            var callback = m_EventMap[protoID];
+            callback?.Invoke(data, protoID);
+        }
+
+    }
+
 
     // 移除监听
     public static void RemoveListener(ushort protoID)
