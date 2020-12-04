@@ -10,6 +10,7 @@ using Google.Protobuf;
 using System.Linq;
 using System.IO;
 using System.Reflection;
+using System.Threading;
 
 public class UClient : MonoBehaviour
 {
@@ -20,6 +21,14 @@ public class UClient : MonoBehaviour
     private float sendTimeIntveral = 2;
     private float lastSendTime;
 
+    public class NetData
+    {
+        public byte[] msg;
+        public ushort msgId;
+    }
+
+    private Queue<NetData> receiveQ = new Queue<NetData>();
+
     private Dictionary<ushort, Type> pTypeDic = new Dictionary<ushort, Type>
     {
         {101, typeof(Person)},
@@ -29,6 +38,8 @@ public class UClient : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+
+        //Debug.Log($"主线程ID {Thread.CurrentThread.ManagedThreadId}");
         AddListeners();
 
         var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -77,12 +88,20 @@ public class UClient : MonoBehaviour
                     BinaryReader reader = new BinaryReader(ms);
                     ushort msgLen = reader.ReadUInt16();
                     ushort protoId = reader.ReadUInt16();
-
+                    //Debug.Log($"接收消息线程ID {Thread.CurrentThread.ManagedThreadId}");  每次都是一个子线程处理，可能不一样
                     Debug.Log($"[Client] receive ：protoID：{protoId}，dataLen：{msgLen}");
+
                     if (msgLen <= data.Length - 4)
                     {
                         byte[] pbdata = reader.ReadBytes(msgLen);
-                        NetMsg.HandleMsg(pbdata, protoId);
+
+                        NetData netData = new NetData()
+                        {
+                            msg = pbdata,
+                            msgId = protoId
+                        };
+                        receiveQ.Enqueue(netData);
+                        //NetMsg.HandleMsg(pbdata, protoId);
                     }
                     else
                     {
@@ -137,6 +156,12 @@ public class UClient : MonoBehaviour
             if (clientSocket == null) return;
             //clientSocket.BeginSend(byteArray, 0, byteArray.Length, SocketFlags.None, null, null);
             NetMsg.SendMsg(clientSocket, john, 102);
+        }
+
+        while (receiveQ.Count > 0)
+        {
+            NetData netData = receiveQ.Dequeue();
+            NetMsg.HandleMsg(netData.msg, netData.msgId);
         }
     }
     private void OnServerDisconnect()
