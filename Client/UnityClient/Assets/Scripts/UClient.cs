@@ -21,6 +21,8 @@ public class UClient : MonoBehaviour
     private float sendTimeIntveral = 2;
     private float lastSendTime;
 
+    private object _lockObj = new object();
+
     public class NetData
     {
         public byte[] msg;
@@ -100,7 +102,12 @@ public class UClient : MonoBehaviour
                             msg = pbdata,
                             msgId = protoId
                         };
-                        receiveQ.Enqueue(netData);
+
+                        lock (_lockObj)
+                        {
+                            receiveQ.Enqueue(netData);
+                        }
+                        
                         //NetMsg.HandleMsg(pbdata, protoId);
                     }
                     else
@@ -158,10 +165,14 @@ public class UClient : MonoBehaviour
             NetMsg.SendMsg(clientSocket, john, 102);
         }
 
-        while (receiveQ.Count > 0)
+
+        lock (_lockObj)
         {
-            NetData netData = receiveQ.Dequeue();
-            NetMsg.HandleMsg(netData.msg, netData.msgId);
+            while (receiveQ.Count > 0)
+            {
+                NetData netData = receiveQ.Dequeue();
+                NetMsg.HandleMsg(netData.msg, netData.msgId);
+            }
         }
     }
     private void OnServerDisconnect()
