@@ -5,4 +5,10 @@ enum EnmCmdID
 {
 	CS_LOGIN = 0;//登录请求协议号
 	SC_LOGIN = 1;//登录请求回包协议号
+
+	CS_PING = 2; //客户端发送心跳
+	SC_PING = 3; //服务器接收心跳
+
+	CS_PERSON = 101; //客户端发送心跳
+	SC_PERSON = 102; //服务器接收心跳
 }

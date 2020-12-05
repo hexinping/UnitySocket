@@ -1,5 +1,6 @@
 ﻿using Google.Protobuf;
 using HxpTest.AddressBook;
+using PB;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -7,6 +8,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Text;
 using static HxpTest.AddressBook.Person.Types;
 
@@ -14,8 +16,11 @@ namespace UnityServer
 {
     class Program
     {
+        private static Socket clientSocket;  //暂时只存储一个socket 后面可以扩展
+        private static long lastCSPingTime; 
         static void Main(string[] args)
         {
+            lastCSPingTime = DateTime.Now.Ticks;
             AddListeners();
             //Console.WriteLine("Hello World!");
 
@@ -37,14 +42,40 @@ namespace UnityServer
             socket.BeginAccept(new AsyncCallback(ClientAccepted), socket);
 
             Console.WriteLine("Server is ready!");
+            var timer = new System.Timers.Timer();
+            timer.Interval = 1000D;
+            timer.Enabled = true;
+            timer.Elapsed += (o, a) => {
+                if (clientSocket != null)
+                {
+                    if (!clientSocket.Connected)
+                    {
+                        timer.Stop();
+                        timer.Enabled = false;
+                        return;
+                    }
+                    //服务器心跳检测
+                    var elspTime = new TimeSpan(DateTime.Now.Ticks - lastCSPingTime);
+                    if (elspTime.Seconds > 5)
+                    {
+                        Console.WriteLine($"【Server】HeartBeat 服务端收到客户端心跳的消息超过5秒");
+                    }
+                }
+                
+            
+            };
+            timer.Start();
+
             Console.Read();
 
         }
 
+        
+
         public static void AddListeners()
         {
-           NetMsg.AddListener(102, new NetHandler(Test));
-
+            NetMsg.AddListener((ushort)PB.EnmCmdID.CsPerson, new NetHandler(Test));
+            NetMsg.AddListener((ushort)PB.EnmCmdID.CsPing, new NetHandler(TestPing));
         }
 
         public static void Test(byte[] data, ushort msgId)
@@ -53,13 +84,21 @@ namespace UnityServer
             Console.WriteLine($"服务端收到客户端的消息{msgId} 回调{person.Name}");
         }
 
+        public static void TestPing(byte[] data, ushort msgId)
+        {
+            CSPing csPing = CSPing.Parser.ParseFrom(data);
+            lastCSPingTime = DateTime.Now.Ticks;
+            Console.WriteLine($"【Server】HeartBeat 服务端收到客户端心跳的消息{msgId} 回调{csPing.Time}  {DateTime.Now}");
+        }
+
         public static void ClientAccepted(IAsyncResult ar)
         {
 
             var socket = ar.AsyncState as Socket;
-
+           
             //这就是客户端的Socket实例，我们后续可以将其保存起来
             var client = socket.EndAccept(ar);
+            clientSocket = client;
             Console.WriteLine($"有新的客户端连接: {client.RemoteEndPoint}");
 
             Person john = new Person
@@ -79,7 +118,7 @@ namespace UnityServer
 
             //给客户端发送一个欢迎消息
             //client.Send(byteArray);
-            NetMsg.SendMsg(client, john, 101);
+            NetMsg.SendMsg(client, john, (ushort)PB.EnmCmdID.ScPerson);
 
 
             //测试代码
@@ -95,6 +134,13 @@ namespace UnityServer
                 {
                     try
                     {
+
+                        SCPing csPing = new SCPing()
+                        {
+                            Time = 1
+                        };
+                        NetMsg.SendMsg(clientSocket, csPing, (ushort)PB.EnmCmdID.ScPing);
+
                         //使用protobuf
                         Person johnSC = new Person
                         {
@@ -108,7 +154,7 @@ namespace UnityServer
                         //byte[] byteArraySC = ProtoBufUtil.Encode(johnSC.ToByteArray(), 101);
                         //client.Send(byteArraySC);
 
-                        NetMsg.SendMsg(client, johnSC, 101);
+                        NetMsg.SendMsg(client, johnSC, (ushort)PB.EnmCmdID.ScPerson);
 
                         //client.Send(Encoding.Unicode.GetBytes("Message from server at " + DateTime.Now.ToString()));
                     }

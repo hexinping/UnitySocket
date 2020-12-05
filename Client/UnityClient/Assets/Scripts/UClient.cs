@@ -11,6 +11,7 @@ using System.Linq;
 using System.IO;
 using System.Reflection;
 using System.Threading;
+using PB;
 
 public class UClient : MonoBehaviour
 {
@@ -20,6 +21,8 @@ public class UClient : MonoBehaviour
 
     private float sendTimeIntveral = 2;
     private float lastSendTime;
+    private float lastSendPingTime;
+    private long lastSCPingTime;
 
     private object _lockObj = new object();
 
@@ -31,16 +34,12 @@ public class UClient : MonoBehaviour
 
     private Queue<NetData> receiveQ = new Queue<NetData>();
 
-    private Dictionary<ushort, Type> pTypeDic = new Dictionary<ushort, Type>
-    {
-        {101, typeof(Person)},
-        {102, typeof(Person)}
-    };
 
     // Start is called before the first frame update
     void Start()
     {
 
+        lastSCPingTime = DateTime.Now.Ticks;
         //Debug.Log($"主线程ID {Thread.CurrentThread.ManagedThreadId}");
         AddListeners();
 
@@ -57,16 +56,24 @@ public class UClient : MonoBehaviour
         Debug.Log("connect to the server");
     }
 
-    public static void AddListeners()
+    public void AddListeners()
     {
-        NetMsg.AddListener(101, new NetHandler(Test));
+        NetMsg.AddListener((ushort)PB.EnmCmdID.ScPerson, new NetHandler(Test));
+        NetMsg.AddListener((ushort)PB.EnmCmdID.ScPing, new NetHandler(TestPing));
 
     }
 
-    public static void Test(byte[] data, ushort msgId)
+    public void Test(byte[] data, ushort msgId)
     {
         Person person = Person.Parser.ParseFrom(data);
         Debug.Log($"客户端收到服务器消息 {msgId} 回调====={person.Name}");
+    }
+
+    public void TestPing(byte[] data, ushort msgId)
+    {
+        SCPing scping = SCPing.Parser.ParseFrom(data);
+        lastSCPingTime = DateTime.Now.Ticks;
+        Debug.Log($"【Client】HeartBeat 客户端收到服务器心跳 {msgId} 回调====={scping.Time}  {DateTime.Now}");
     }
 
     public void ReceiveMessage(IAsyncResult ar)
@@ -137,18 +144,39 @@ public class UClient : MonoBehaviour
         }
     }
 
+
     // Update is called once per frame
     void Update()
     {
         if (clientSocket == null) return;
-        //测试code
+
+
+        if (Time.time - lastSendPingTime >= 1)
+        {
+            lastSendPingTime = Time.time;
+            //心跳检测
+            var elapTime = new TimeSpan(DateTime.Now.Ticks - lastSCPingTime);
+            if (elapTime.Seconds > 5)
+            {
+                Debug.Log($"未收到服务器的心跳信息超过5秒 心跳超时===={DateTime.Now}");
+            }
+
+            CSPing csPing = new CSPing()
+            {
+                Time = 1
+            };
+            NetMsg.SendMsg(clientSocket, csPing, (ushort)PB.EnmCmdID.CsPing);
+        }
+            //测试code
         if (Time.time - lastSendTime >= sendTimeIntveral)
         {
             lastSendTime = Time.time;
             //var message = "Message from client : " + DateTime.Now;
             //var outputBuffer = Encoding.Unicode.GetBytes(message);
 
-          
+            
+
+
             //使用protobuf
             Person john = new Person
             {
@@ -162,7 +190,7 @@ public class UClient : MonoBehaviour
             //byte[] byteArray = ProtoBufUtil.Encode(john.ToByteArray(), 102);
             if (clientSocket == null) return;
             //clientSocket.BeginSend(byteArray, 0, byteArray.Length, SocketFlags.None, null, null);
-            NetMsg.SendMsg(clientSocket, john, 102);
+            NetMsg.SendMsg(clientSocket, john, (ushort)PB.EnmCmdID.CsPerson);
         }
 
 

@@ -24,8 +24,9 @@ namespace PB {
     static PBCmdReflection() {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
-            "CgtQQkNtZC5wcm90bxICUEIqJgoIRW5tQ21kSUQSDAoIQ1NfTE9HSU4QABIM",
-            "CghTQ19MT0dJThABYgZwcm90bzM="));
+            "CgtQQkNtZC5wcm90bxICUEIqXgoIRW5tQ21kSUQSDAoIQ1NfTE9HSU4QABIM",
+            "CghTQ19MT0dJThABEgsKB0NTX1BJTkcQAhILCgdTQ19QSU5HEAMSDQoJQ1Nf",
+            "UEVSU09OEGUSDQoJU0NfUEVSU09OEGZiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::PB.EnmCmdID), }, null, null));
@@ -43,6 +44,22 @@ namespace PB {
     ///登录请求回包协议号
     /// </summary>
     [pbr::OriginalName("SC_LOGIN")] ScLogin = 1,
+    /// <summary>
+    ///客户端发送心跳
+    /// </summary>
+    [pbr::OriginalName("CS_PING")] CsPing = 2,
+    /// <summary>
+    ///服务器接收心跳
+    /// </summary>
+    [pbr::OriginalName("SC_PING")] ScPing = 3,
+    /// <summary>
+    ///客户端发送心跳
+    /// </summary>
+    [pbr::OriginalName("CS_PERSON")] CsPerson = 101,
+    /// <summary>
+    ///服务器接收心跳
+    /// </summary>
+    [pbr::OriginalName("SC_PERSON")] ScPerson = 102,
   }
 
   #endregion

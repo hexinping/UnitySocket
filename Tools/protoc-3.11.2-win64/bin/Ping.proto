@@ -1,0 +1,12 @@
+syntax = "proto3"; //使用proto3语法编译
+package PB;      //声明包名
+
+message CSPing    //message关键字声明类型
+{
+    int32 time = 1;  //字段得从1开始声明
+}
+
+message SCPing    //message关键字声明类型
+{
+    int32 time = 1;  //字段得从1开始声明
+}
